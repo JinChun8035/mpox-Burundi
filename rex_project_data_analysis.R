@@ -77,7 +77,7 @@ plot_newcases_end_date
 
 
 # Plotting environmental factors over time (checking climate fluctuations)
-
+# on one graph
 plot_env_time <- ggplot(inner_join, aes(x = week_end_date)) +
   geom_line(aes(y = temp, color = "Temperature")) +
   geom_line(aes(y = humidity, color = "Humidity")) +
@@ -85,9 +85,8 @@ plot_env_time <- ggplot(inner_join, aes(x = week_end_date)) +
   geom_line(aes(y = windspeed, color = "Wind Speed")) +
   geom_line(aes(y = dew, color = "Dew")) + 
   labs(title = "Environmental Trends Over Time", x = "Week", y = "Value")
-
 plot_env_time
-
+# on separate graphs
 plot_env_time_2 <- ggplot(longer_data, aes(x=week_end_date)) +
   geom_line(aes(y=data, color=metereological_factor)) +
   facet_wrap(.~metereological_factor)+
@@ -97,7 +96,8 @@ plot_env_time_2
 # 2b Distribution and Summary Statistics
 # Identifying skewness in meteorological factors
 # Install and load the e1071 package for calculating skewness
-install.packages("e1071")
+# install.packages("e1071") # do you need to run this everytime?
+# TODO: is this sufficient or do we need histogram, boxplot, and density plots
 library(e1071)
 
 # Calculate skewness
