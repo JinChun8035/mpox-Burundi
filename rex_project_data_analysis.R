@@ -2,19 +2,20 @@ library(dplyr)
 library(tidyverse)
 library(lubridate)
 library(ggplot2)
-library(corrplot)
+library(corrplot) 
 library(MASS)
-library(pscl)
+library(pscl) 
 
 # uploading data
 mpox_cases_raw_unfiltered <- read_csv('afr_cases_as_of_february_2nd.csv')
 temperature_burundi_unfiltered <- read_csv('correct_metereological_data.csv')
 
 # filtering data
+# TODO: have observations as Mean (Min, Max)?
 burundi_cases <- mpox_cases_raw_unfiltered %>%
   filter(country == "Burundi") %>%
-  subset(select = c(week_end_date:total_suspected_cases, 
-                    new_confirmed_cases:new_suspected_cases)) %>%
+  subset(select = c(week_end_date:total_confirmed_cases, 
+                    new_confirmed_cases)) %>%
   arrange(week_end_date)
 burundi_cases$ID <- c(0: (nrow(burundi_cases) - 1))
 temperature_burundi_unfiltered$ID <- c(0, rep(1:(nrow(temperature_burundi_unfiltered)-1)%/%7))
@@ -155,6 +156,7 @@ dispersion_ratio <- sum(residuals(poisson_model, type = "pearson")^2) / poisson_
 if (dispersion_ratio > 1.5) {print("Overdispersion detected. Using Negative Binomial Model.")
   nb_model <- glm.nb(new_confirmed_cases ~ temp + humidity + dew + precip + windspeed, data = inner_join)
   summary(nb_model)}
+# TODO: Error in if (dispersion_ratio > 1.5) { : argument is of length zero
 # Step 9: Model Diagnostics
 AIC(poisson_model)
 BIC(poisson_model)
