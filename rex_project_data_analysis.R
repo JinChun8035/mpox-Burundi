@@ -3,9 +3,8 @@ library(tidyverse)
 library(lubridate)
 library(ggplot2)
 library(corrplot) 
-library(MASS)
+library(MASS) # for glm function
 library(pscl) 
-
 # uploading data
 mpox_cases_raw_unfiltered <- read_csv('afr_cases_as_of_february_2nd.csv')
 temperature_burundi_unfiltered <- read_csv('correct_metereological_data.csv')
@@ -197,6 +196,40 @@ correlation_data
 poisson_model <- glm(new_confirmed_cases ~ temp + humidity + dew + precip + windspeed, 
                      family = poisson(link = "log"), data = inner_join)
 summary(poisson_model)
+
+# OBJECTIVE: Calculate R squared values 
+# Fit the full model
+full_model <- glm(new_confirmed_cases ~ temp + humidity + dew + precip + windspeed, 
+                  family = poisson(link = "log"), data = inner_join)
+full_model
+# Null model (no predictors)
+null_model <- glm(new_confirmed_cases ~ 1, 
+                  family = poisson(link = "log"), data = inner_join)
+null_model
+# Function to compute McFadden's R² 
+compute_mcfadden_r2 <- function(model, null_model) {
+  1 - (logLik(model) / logLik(null_model))
+}
+compute_mcfadden_r2
+# Compute full model McFadden R²
+r2_full <- compute_mcfadden_r2(full_model, null_model)
+
+# Compute McFadden R² for models with one predictor removed
+r2_temp <- compute_mcfadden_r2(update(full_model, . ~ . - temp), null_model)
+r2_humidity <- compute_mcfadden_r2(update(full_model, . ~ . - humidity), null_model)
+r2_dew <- compute_mcfadden_r2(update(full_model, . ~ . - dew), null_model)
+r2_precip <- compute_mcfadden_r2(update(full_model, . ~ . - precip), null_model)
+r2_windspeed <- compute_mcfadden_r2(update(full_model, . ~ . - windspeed), null_model)
+
+# Print the individual pseudo R² values
+r2_full # 0.296 , df= 6.  # this is the McFadden Pseudo r^2 for the full model
+r2_temp # 0.188 , df = 5
+r2_humidity # 0.173 , df = 5
+r2_dew # 0.186, df = 5
+r2_precip # 0.295, df = 5
+r2_windspeed # 0.237, df = 5
+
+
 # P values from here: only precip is not significant -> rest are ok -> can be predictors
 # predictor: if it was 1 -> no effect, more than 1, associated effect, less than 1, not-associated effect
 # 
@@ -221,24 +254,20 @@ if (dispersion_ratio > 1.5) {print("Overdispersion detected. Using Negative Bino
 AIC(poisson_model)
 BIC(poisson_model)
 
-poissson_plot <- ggplot(data.frame(resid = residuals(poisson_model, type = "pearson")), aes(x = resid)) +
+poisson_plot <- ggplot(data.frame(resid = residuals(poisson_model, type = "pearson")), aes(x = resid)) +
   geom_histogram(bins = 20, fill = "blue", alpha = 0.5) +
   labs(title = "Residuals Distribution")
+
 # left skew: meaning it is a good model?
 
-library(officer)
-?read_docx()
-doc <- read_docx() %>%
-  body_add_par("Mpox Analysis Report", style = "heading 1") %>%
-  body_add_par(paste(capture.output(summary(plot_newcases_end_date)), collapse = "\n")) %>%
-  body_add_par(paste(capture.output(summary(plot_env_time)), collapse = "\n")) %>%  
-  body_add_par(paste(capture.output(summary(plot_env_time2)), collapse = "\n")) %>%
-  body_add_par(paste(capture.output(summary(skewness_data)), collapse = "\n")) %>%
-  body_add_par(paste(capture.output(summary(skewness_data)), collapse = "\n")) %>%
-  body_add_par("Demographic Analysis", style = "heading 2") %>%
-  body_add_par(paste(capture.output(summary(correlation_data)), collapse = "\n")) %>%
-  body_add_par("Regression Analysis", style = "heading 2") %>%
-  body_add_par(paste(capture.output(summary(poissson_plot)), collapse = "\n"))
 
-print(doc, target = "mpox_analysis_report.docx")
+
+ggplot(longer_data, aes(y = data, 
+                      x = new_confirmed_cases)) +
+  geom_point(alpha = .5) + 
+  geom_smooth(method = "glm",
+              se = FALSE,
+              method.args = list(family = "poisson")) +
+  facet_wrap(~metereological_factor)
+  scale_color_brewer(palette = "Dark2")
 
