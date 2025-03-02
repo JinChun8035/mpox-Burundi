@@ -5,11 +5,16 @@ library(ggplot2)
 library(corrplot) 
 library(MASS) # for glm function
 library(pscl) 
-# uploading data
+library(arm)
+library(jtools)
+library(lmtest)
+library(effects)
+
+### uploading data
 mpox_cases_raw_unfiltered <- read_csv('afr_cases_as_of_february_2nd.csv')
 temperature_burundi_unfiltered <- read_csv('correct_metereological_data.csv')
 
-# filtering data
+### filtering data
 # TODO: have observations as Mean (Min, Max)?
 burundi_cases <- mpox_cases_raw_unfiltered %>%
   filter(country == "Burundi") %>%
@@ -43,7 +48,7 @@ longer_data <- inner_join %>%
                names_to = "metereological_factor",
                values_to = "data")
 
-# Inspect Data
+### Inspect Data
 str(inner_join)  # Check structure of dataset
 summary(inner_join)  # Summary statistics
 
@@ -58,7 +63,7 @@ descriptive_table <- inner_join %>% summarise(
 )
 print(descriptive_table)
 
-# 2a Identifying time-series trends 
+### 2a Identifying time-series trends 
 # Plot: Line chart (new_confirmed_cases vs. week_end_date)
 # TODO: make month wise
 plot_newcases_end_date <- inner_join %>%
@@ -125,7 +130,7 @@ plot_env_time2
 #TODO: one graph: show mpox case bar chart + the environmental factors 
 # monthly -> see example graph 
 
-# 2b Distribution and Summary Statistics
+### 2b Distribution and Summary Statistics
 # Identifying skewness in meteorological factors
 # Install and load the e1071 package for calculating skewness
 # TODO: is this sufficient or do we need histogram, boxplot, and density plots
@@ -148,13 +153,13 @@ skewness_data
 
 # New mpox confirmed cases also indicate normality. 
 
-# Part 3: Correlation Analysis
+### Part 3: Correlation Analysis
 correlation_data <- data.frame(variable = c("Temperature",
                                             "Humidity",
                                             "Windspeed",
                                             "Dew",
                                             "Precipitation"),
-                               correlation_value=
+                               p_value =
                                  c(cor(inner_join$new_confirmed_cases, 
                                        inner_join$temp, method = 'pearson'),
                                    cor(inner_join$new_confirmed_cases, 
@@ -172,10 +177,17 @@ correlation_data <- data.frame(variable = c("Temperature",
                                                     "Spearman Correlation"))
 
 cor.test(inner_join$new_confirmed_cases, inner_join$temp, method = "pearson")
+# p value = 0.3255
 cor.test(inner_join$new_confirmed_cases, inner_join$humidity, method = "pearson")
+# p value = 0.06814
 cor.test(inner_join$new_confirmed_cases, inner_join$windspeed, method = "pearson")
+# p value = 0.8953
 cor.test(inner_join$new_confirmed_cases, inner_join$dew, method = "pearson")
-cor.test(inner_join$new_confirmed_cases, inner_join$precip, method = "spearman")
+# p value = 0.07304
+cor.test(inner_join$new_confirmed_cases, inner_join$precip, method = "kendall")
+# kendall is used due to ties being present
+# kendall still works with skewed data and is more robust to ties 
+# p value = 0.005697
 
 # look at p-value for the rule of thumb
 # -0.189 for temp means negative correlation 
@@ -191,7 +203,7 @@ correlation_data
 # Humidity and dew are moderate predictors 
 # dew and temp are a weak predictors
 
-# Part 4: Regression Analysis
+### Part 4: Regression Analysis
 
 poisson_model <- glm(new_confirmed_cases ~ temp + humidity + dew + precip + windspeed, 
                      family = poisson(link = "log"), data = inner_join)
@@ -229,6 +241,10 @@ r2_dew # 0.186, df = 5
 r2_precip # 0.295, df = 5
 r2_windspeed # 0.237, df = 5
 
+### Variable selection using BIC 
+stepAIC(poisson_model, direction = 'both', k = log(dim(inner_join)[1]))
+# it appears that  temp + humidity + dew + windspeed are the most relevant
+# predictors in our model.
 
 # P values from here: only precip is not significant -> rest are ok -> can be predictors
 # predictor: if it was 1 -> no effect, more than 1, associated effect, less than 1, not-associated effect
@@ -245,10 +261,87 @@ r2_windspeed # 0.237, df = 5
 # only seeing small portion of variation 
 exp(coef(poisson_model))
 # coefficients from here -> related risks 
-dispersion_ratio <- sum(residuals(poisson_model, type = "pearson")^2) / poisson_model$inner_join.residual
-if (dispersion_ratio > 1.5) {print("Overdispersion detected. Using Negative Binomial Model.")
+
+### Poisson regression: Over-dispersion 
+# check mean() and var() of dependent variable to determine if we will 
+# have overdispersion in our model
+mean(inner_join$new_confirmed_cases)
+var(inner_join$new_confirmed_cases)
+# variance is much larger than mean, suggesting that there will be 
+# over-dispersion in our model
+
+# TODO: does this mean that we use quasi-poisson regression since our data's
+# dependent variable has over-dispersed count data? 
+
+poisson_model2 <- glm(new_confirmed_cases ~ temp + humidity + dew + precip +
+                         windspeed, data = inner_join, 
+                       family = quasipoisson(link = "log"))
+summary(poisson_model2)
+
+# extract coefficients from first model using 'coef()'
+coef1 = coef(poisson_model) 
+
+# extract coefficients from second model
+coef2 = coef(poisson_model2) 
+
+# extract standard errors from first model using 'se.coef()'
+se.coef1 = se.coef(poisson_model) 
+
+# extract standard errors from second model
+se.coef2 = se.coef(poisson_model2)
+
+# use 'cbind()' to combine values into one dataframe
+models_both <- cbind(coef1, se.coef1, coef2, se.coef2, exponent = exp(coef1)) 
+
+# show dataframe
+models_both
+# shows the coefficients as same, but the SE is different
+
+plot_summs(poisson_model, poisson_model2, scale = TRUE, exp = TRUE)
+
+
+### negative binomial model
+nb_model <- glm.nb(new_confirmed_cases ~ temp + humidity + dew + precip + windspeed, 
+                 data = inner_join)
+summary(nb_model)
+# model comparison using likelihood ratio tests
+lrtest(poisson_model, nb_model)
+# p value is much smaller, meaning non-binary is better model
+
+plot(residuals(nb_model, type = "deviance"))
+# calculate pseudo r squared to test how well model fits 
+1 - (nb_model$deviance / nb_model$null.deviance)
+# gives 0.248763
+
+### Visualising results
+plot(fitted(nb_model), residuals(nb_model, type = "pearson"), 
+     xlab = "Fitted Values", ylab = "Pearson Residuals", 
+     main = "Residuals vs Fitted Values", pch = 16, col = "blue")
+abline(h = 0, lty = 2, col = "red")
+# this shows randomly scattered values, meaning this is a good model
+
+hist(residuals(nb_model, type = "pearson"), 
+     main = "Histogram of Pearson Residuals", 
+     xlab = "Residuals", col = "lightblue", border = "black")
+# kind of shows normality? meaning good model
+
+plot(effect("temp", nb_model), main = "Effect of Temperature on Predicted Cases")
+plot(effect("humidity", nb_model), main = "Effect of Humidity on Predicted Cases")
+plot(effect("dew", nb_model), main = "Effect of Dew on Predicted Cases")
+plot(effect("precip", nb_model), main = "Effect of Precipitation on Predicted Cases")
+plot(effect("windspeed", nb_model), main = "Effect of Windspeed on Predicted Cases")
+# suggests that precip and windspeed aren't that good of a predictors? because
+# of wider spread?
+
+
+### Poisson regression: Over-dispersion 
+dispersion_ratio <- sum(residuals(poisson_model, type = "pearson")^2) / poisson_model$inner_join.residual 
+if (dispersion_ratio > 1.5) {
+  print("Overdispersion detected. Using Negative Binomial Model.")
   nb_model <- glm.nb(new_confirmed_cases ~ temp + humidity + dew + precip + windspeed, data = inner_join)
-  summary(nb_model)}
+  summary(nb_model)
+}
+
 # TODO: Error in if (dispersion_ratio > 1.5) { : argument is of length zero
 # Step 9: Model Diagnostics
 AIC(poisson_model)
@@ -257,17 +350,5 @@ BIC(poisson_model)
 poisson_plot <- ggplot(data.frame(resid = residuals(poisson_model, type = "pearson")), aes(x = resid)) +
   geom_histogram(bins = 20, fill = "blue", alpha = 0.5) +
   labs(title = "Residuals Distribution")
-
+poisson_plot
 # left skew: meaning it is a good model?
-
-
-
-ggplot(longer_data, aes(y = data, 
-                      x = new_confirmed_cases)) +
-  geom_point(alpha = .5) + 
-  geom_smooth(method = "glm",
-              se = FALSE,
-              method.args = list(family = "poisson")) +
-  facet_wrap(~metereological_factor)
-  scale_color_brewer(palette = "Dark2")
-
