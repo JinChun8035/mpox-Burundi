@@ -124,7 +124,7 @@ plot_env_time2
 
 # TODO: Mpox case bar chart + the environmental factors 
 combined_data <- ggplot(inner_join, aes(x = week_end_date)) +
-  geom_line(aes(y = new_confirmed_cases, color = "New Cases")) +
+  geom_bar(aes(y = new_confirmed_cases), stat="identity") +
   geom_line(aes(y = temp, color = "Temperature")) +
   geom_line(aes(y = humidity, color = "Humidity")) +
   geom_line(aes(y = precip, color = "Precipitation")) +
