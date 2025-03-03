@@ -77,33 +77,24 @@ plot_newcases_end_date <- inner_join %>%
 plot_newcases_end_date
 # keep in poster -> important to show ppl that there is variations in mpox cases
 # upward and downward trends 
-# granulation -> make month wise 
-# show each individual month 
-# identify which months -> peaks 
-# low transmission phases -> don't know the cause -> from graph we can identify LTP
-# typically needs one eyar
-# decline phases -> December onwards - see general decrease in mpox cases
-# rapid onset(?) phases -> August probably 
-# peaks -> somewhere in November, September
-
-# this is justification for why we are analysing metereological factors 
-# why do these peaks exist?
-
-# Major peak identified in November
-# Small peaks identified in September and late January
-
+# Drastic increase Sep-Oct, Oct-Nov, and consider why drop Dec-Jan
+# Low Transmission Phases (LTP) 
+# Rapid Onset Phases -> 2024-09-15 onwards suddenly above 100, drops below 100 
+# 2024-12-29
+# Major peak identified 2024-09-15 goes over 100, 2025-10-27 at 222 new cases
+# Small peak identified 2025-01-19 where it reaches 120 (>100)
+# Seems like we could cluster the data into k=2 with threshold around 125 new cases
 
 # Plotting environmental factors over time (checking climate fluctuations)
 # on one graph
 # goal: are there any changes/patterns?
-# TODO: month wise (monthly data)
-
 plot_env_time <- ggplot(inner_join, aes(x = week_end_date)) +
   geom_line(aes(y = temp, color = "Temperature")) +
   geom_line(aes(y = humidity, color = "Humidity")) +
   geom_line(aes(y = precip, color = "Precipitation")) +
   geom_line(aes(y = windspeed, color = "Wind Speed")) +
   geom_line(aes(y = dew, color = "Dew")) + 
+  scale_x_date(date_labels="%b %y",date_breaks  ="1 month") +
   labs(title = "Environmental Trends Over Time", x = "Week", y = "Value")
 plot_env_time
 # same change granulation -> show more month-wise data 
@@ -118,7 +109,6 @@ plot_env_time
 # this is just for preliminary understanding: understand full data: seeing the bigger picture
 # understand: is there any changes in factor over the months
 # if we don't see any variations -> have to be careful making interpretations later on
-# 
 
 # on separate graphs
 plot_env_time2 <- ggplot(longer_data, aes(x=week_end_date)) +
