@@ -65,15 +65,15 @@ print(descriptive_table)
 
 ### 2a Identifying time-series trends 
 # Plot: Line chart (new_confirmed_cases vs. week_end_date)
-# TODO: make month wise
 plot_newcases_end_date <- inner_join %>%
   ggplot(aes(x=week_end_date, y=new_confirmed_cases)) +
   geom_line() +
   geom_point() +
+  scale_x_date(date_labels="%b %y",date_breaks  ="1 month") +
   labs(title="Burundi New Confirmed Clade1b Mpox Cases vs Date of Data 
        Collection, weekly",
        x= "Date of Data Collection", 
-       y= "Newly Confirmed Clad1b Mpox Cases")
+       y= "Newly Confirmed Clad1b Mpox Cases") 
 plot_newcases_end_date
 # keep in poster -> important to show ppl that there is variations in mpox cases
 # upward and downward trends 
