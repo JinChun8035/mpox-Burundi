@@ -94,18 +94,23 @@ plot_env_time <- ggplot(inner_join, aes(x = week_end_date)) +
   geom_line(aes(y = precip, color = "Precipitation")) +
   geom_line(aes(y = windspeed, color = "Wind Speed")) +
   geom_line(aes(y = dew, color = "Dew")) + 
-  scale_x_date(date_labels="%b %y",date_breaks  ="1 month") +
+  scale_x_date(date_labels="%b %y", date_breaks = "1 month") +
   labs(title = "Environmental Trends Over Time", x = "Week", y = "Value")
 plot_env_time
-# same change granulation -> show more month-wise data 
-# temperature not changing much -> shows idea that it doesn't rly affect much
-# july-feberuary - temp. barely fluctuates 
-# need to change the axis to show fluctuation better 
-# just because we don't see much fluctuation doesn't mean there is no correlation at all w mpox
-# what we can show is: 
-
-# changes: x-axis show individual months 
-# averaged form of data -> monthly 
+# Monthly average
+plot_env_monthly <- inner_join %>%
+  group_by(month = lubridate::floor_date(week_end_date, 'month')) %>%
+  summarize(temp = mean(temp), humidity = mean(humidity), precip = mean(precip), 
+            windspeed = mean(windspeed), dew = mean(dew)) %>%
+  ggplot(aes(x = month)) +
+  geom_line(aes(y = temp, color = "Temperature")) +
+  geom_line(aes(y = humidity, color = "Humidity")) +
+  geom_line(aes(y = precip, color = "Precipitation")) +
+  geom_line(aes(y = windspeed, color = "Wind Speed")) +
+  geom_line(aes(y = dew, color = "Dew")) + 
+  scale_x_date(date_labels="%b %y", date_breaks = "1 month") +
+  labs(title = "Environmental Trends Over Time", x = "Month", y = "Value")
+plot_env_monthly
 # this is just for preliminary understanding: understand full data: seeing the bigger picture
 # understand: is there any changes in factor over the months
 # if we don't see any variations -> have to be careful making interpretations later on
@@ -117,8 +122,18 @@ plot_env_time2 <- ggplot(longer_data, aes(x=week_end_date)) +
   labs(title = "Environmental Trends Over Time", x = "Week", y = "Value")
 plot_env_time2
 
-#TODO: one graph: show mpox case bar chart + the environmental factors 
-# monthly -> see example graph 
+# TODO: Mpox case bar chart + the environmental factors 
+combined_data <- ggplot(inner_join, aes(x = week_end_date)) +
+  geom_line(aes(y = new_confirmed_cases, color = "New Cases")) +
+  geom_line(aes(y = temp, color = "Temperature")) +
+  geom_line(aes(y = humidity, color = "Humidity")) +
+  geom_line(aes(y = precip, color = "Precipitation")) +
+  geom_line(aes(y = windspeed, color = "Wind Speed")) +
+  geom_line(aes(y = dew, color = "Dew")) + 
+  scale_x_date(date_labels="%b %y", date_breaks = "1 month") +
+  labs(title = "Environmental Trends and New Mpox Cases in Burundi", 
+       x = "Week", y = "Value")
+combined_data
 
 ### 2b Distribution and Summary Statistics
 # Identifying skewness in meteorological factors
