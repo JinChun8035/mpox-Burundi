@@ -124,16 +124,32 @@ plot_env_time2
 
 # TODO: Mpox case bar chart + the environmental factors 
 combined_data <- ggplot(inner_join, aes(x = week_end_date)) +
-  geom_bar(aes(y = new_confirmed_cases), stat="identity") +
-  geom_line(aes(y = temp, color = "Temperature")) +
-  geom_line(aes(y = humidity, color = "Humidity")) +
-  geom_line(aes(y = precip, color = "Precipitation")) +
-  geom_line(aes(y = windspeed, color = "Wind Speed")) +
-  geom_line(aes(y = dew, color = "Dew")) + 
+  geom_bar(aes(y = new_confirmed_cases), stat="identity", alpha=0.5) +
+  geom_line(aes(y = temp, color = "Temperature"), size=0.8) +
+  geom_line(aes(y = humidity, color = "Humidity"), size=0.8) +
+  geom_line(aes(y = precip, color = "Precipitation"), size=0.8) +
+  geom_line(aes(y = windspeed, color = "Wind Speed"), size=0.8) +
+  geom_line(aes(y = dew, color = "Dew"), size=0.8) + 
   scale_x_date(date_labels="%b %y", date_breaks = "1 month") +
-  labs(title = "Environmental Trends and New Mpox Cases in Burundi", 
-       x = "Week", y = "Value")
+  labs(title = "Environmental Trends and New Mpox 
+Cases in Burundi", 
+       x = "Week", y = "Value") +
+  scale_color_manual(values = c(
+    "#E69F00", "#56B4E9", "#009E73", "#F0E442", 
+    "#0072B2", "#D55E00", "#CC79A7"
+  ))+
+  
+  # Clean theme with adjustments
+  theme_minimal(base_size = 16) +
+  theme(plot.title = element_text(size = 28, face = "bold", hjust = 0.5),  # Bigger & centered title
+    axis.title = element_text(size = 20),  # Bigger axis labels
+    axis.text = element_text(size = 16),  # Bigger tick labels
+    legend.title = element_text(size = 14, face = "bold"),  # Bigger legend title
+    legend.text = element_text(size = 12)  # Bigger legend labels
+  ) 
+  
 combined_data
+
 
 ### 2b Distribution and Summary Statistics
 # Identifying skewness in meteorological factors
@@ -180,7 +196,7 @@ correlation_data <- data.frame(variable = c("Temperature",
                                                     "Pearson Correlation",
                                                     "Pearson Correlation",
                                                     "Spearman Correlation"))
-
+correlation_data
 cor.test(inner_join$new_confirmed_cases, inner_join$temp, method = "pearson")
 # p value = 0.3255
 cor.test(inner_join$new_confirmed_cases, inner_join$humidity, method = "pearson")
@@ -357,3 +373,133 @@ poisson_plot <- ggplot(data.frame(resid = residuals(poisson_model, type = "pears
   labs(title = "Residuals Distribution")
 poisson_plot
 # left skew: meaning it is a good model?
+
+
+# TODO
+ggsave("combined_data.png")
+
+longer_data <- longer_data %>%
+  pivot_longer(cols = c("total_confirmed_cases", "new_confirmed_cases"),
+               names_to = "mpox_cases",
+               values_to = "data2")
+
+
+
+plot3 <- longer_data %>%
+  ggplot(aes(x = week_end_date, y = data2, color = mpox_cases)) +
+  
+  # Thicker lines and bigger points for better visibility
+  geom_line(size = 1.5) +  
+  geom_point(size = 3) +  
+  
+  # Date formatting
+  scale_x_date(date_labels = "%b %y", date_breaks = "1 month") +
+  
+  # Colorblind-friendly high-contrast palette
+  scale_color_brewer(palette = "Set1") +  
+  
+  # Clean theme with adjustments
+  theme_minimal(base_size = 16) +  
+  
+  # Improve readability
+  labs(
+    x = "Week", 
+    y = "Number of Cases",
+    title = "New Confirmed and Total Confirmed
+    Mpox Cases Over Time in Burundi",
+    color = "Case Type"  # Improves legend clarity
+  ) +
+  
+  # Adjust font sizes and make titles bold for better visibility
+  theme(
+    plot.title = element_text(size = 28, face = "bold", hjust = 0.5),  # Bigger & centered title
+    axis.title = element_text(size = 20),  # Bigger axis labels
+    axis.text = element_text(size = 16),  # Bigger tick labels
+    legend.title = element_text(size = 14, face = "bold"),  # Bigger legend title
+    legend.text = element_text(size = 12)  # Bigger legend labels
+  )
+
+# Display the plot
+plot3
+
+plot3
+ggsave("plot3.png", width = 12, height =8, dpi= 600)
+ggsave("combined_data.png", width = 12, height =8, dpi= 600)
+
+# rate ratio analysis using temp and humidity 
+temp_hum <- inner_join %>%
+    select(temp, humidity, new_confirmed_cases, week_end_date) 
+
+median(inner_join$humidity) # 67.3871
+median(inner_join$temp) # 24.62857
+
+
+#calculating rate ratios
+median_temp <- median(inner_join$temp, na.rm = TRUE)
+temp_med_binary <- inner_join %>%
+  mutate(group = ifelse(temp > median_temp, "Above Median", "Below Median"))
+transmission_rates <- temp_med_binary %>%
+  group_by(group) %>%
+  summarise(mean_temp = mean(new_confirmed_cases, na.rm = TRUE))
+transmission_rates
+rate_ratio1 <- transmission_rates$mean_temp[transmission_rates$group == "Below Median"] / 
+  transmission_rates$mean_temp[transmission_rates$group == "Above Median"]
+rate_ratio1
+# 1.21
+median_dew <- median(inner_join$dew, na.rm = TRUE)
+dew_med_binary <- inner_join %>%
+  mutate(group = ifelse(dew > median_dew, "Above Median", "Below Median"))
+transmission_rates <- dew_med_binary %>%
+  group_by(group) %>%
+  summarise(mean_dew = mean(new_confirmed_cases, na.rm = TRUE))
+transmission_rates
+rate_ratio2 <- transmission_rates$mean_dew[transmission_rates$group == "Above Median"] / 
+  transmission_rates$mean_dew[transmission_rates$group == "Below Median"]
+rate_ratio2
+# 1.403
+median_windspeed <- median(inner_join$windspeed, na.rm = TRUE)
+windspeed_med_binary <- inner_join %>%
+  mutate(group = ifelse(windspeed > median_windspeed, "Above Median", "Below Median"))
+transmission_rates <- windspeed_med_binary %>%
+  group_by(group) %>%
+  summarise(mean_windspeed = mean(new_confirmed_cases, na.rm = TRUE))
+transmission_rates
+rate_ratio3 <- transmission_rates$mean_windspeed[transmission_rates$group == "Above Median"] / 
+  transmission_rates$mean_windspeed[transmission_rates$group == "Below Median"]
+rate_ratio3
+# 0.99 no substantial difference
+median_precip <- median(inner_join$precip, na.rm = TRUE)
+precip_med_binary <- inner_join %>%
+  mutate(group = ifelse(precip > median_precip, "Above Median", "Below Median"))
+transmission_rates <- precip_med_binary %>%
+  group_by(group) %>%
+  summarise(mean_precip = mean(new_confirmed_cases, na.rm = TRUE))
+transmission_rates
+rate_ratio4 <- transmission_rates$mean_precip[transmission_rates$group == "Above Median"] / 
+  transmission_rates$mean_precip[transmission_rates$group == "Below Median"]
+rate_ratio4
+# 1.67
+median_humidity <- median(inner_join$humidity, na.rm = TRUE)
+humidity_med_binary <- inner_join %>%
+  mutate(group = ifelse(humidity > median_humidity, "Above Median", "Below Median"))
+transmission_rates <- humidity_med_binary %>%
+  group_by(group) %>%
+  summarise(mean_humidity = mean(new_confirmed_cases, na.rm = TRUE))
+transmission_rates
+rate_ratio5 <- transmission_rates$mean_humidity[transmission_rates$group == "Above Median"] / 
+  transmission_rates$mean_humidity[transmission_rates$group == "Below Median"]
+rate_ratio5
+# 1.67 
+
+# TODO Create data frame for rate ratio vs environmental factors
+rate_ratio_data <- data.frame(environmental_factor = c("Temperature", "Dew", 
+                                      "Humidity", "Precipitation", "Windspeed"),
+                                      rate_ratio = c(rate_ratio1, rate_ratio2, rate_ratio5, rate_ratio4, rate_ratio3))
+
+rate_ratio_plot <- rate_ratio_data %>%
+    ggplot(aes(y=environmental_factor)) +
+    geom_bar(aes(rate_ratio))
+rate_ratio_plot
+# TODO seasonal impact on mpox transmissions
+
+  
