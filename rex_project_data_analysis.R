@@ -500,6 +500,35 @@ rate_ratio_plot <- rate_ratio_data %>%
   geom_bar(aes(y=rate_ratio), stat="identity", alpha=0.5)
 rate_ratio_plot
 
-# TODO seasonal impact on mpox transmissions
+# Seasonal impact on mpox transmissions
+# TBH I feel iffy abt this cause we're only using data from when mpox first 
+# arrived and up to December where there happened to be a major spike in 
+# November which doesn't really correlate with dry or wet season
+seasonal_impact <- inner_join %>% 
+  mutate(month = month(week_end_date)) %>%
+  group_by(month) %>%
+  summarise(mean_new_confirmed_cases = mean(new_confirmed_cases), 
+            total_new_confirmed_cases = sum(new_confirmed_cases))
+# 2 to represent other, 1 for wet season, 0 for dry season
+seasonal_impact$ID <- c(2, 2, 0, 0, 0, 1, 1, 1)
+seasonal_impact <- seasonal_impact %>%
+  group_by(ID) %>%
+  summarise(mean_new_confirmed_cases = mean(mean_new_confirmed_cases), 
+            total_new_confirmed_cases = sum(total_new_confirmed_cases))
+seasonal_impact
+# According to Saiful's data:	Wet Season (Oct-Dec): 161 average weekly cases 
+# (2093 total cases). Dry Season (Jul-Sep): 78 average weekly cases (853 total 
+# cases). Rate Ratio: 2.08× higher transmission during wet season
+# WE GOT Wet Season (Oct-Dec): 161 average weekly cases 
+# (2093 total cases). Dry Season (Jul-Sep): 61.5 average weekly cases (853 total 
+# cases)
+seasonal_impact_plot <- seasonal_impact %>%
+  filter(ID == 0 | ID == 1) %>%
+  ggplot(aes(x = ID)) +
+  geom_bar(aes(y = mean_new_confirmed_cases), stat="identity") + 
+  labs(title = "Seasonal Impact on Mpox Transmission", 
+       x = "Season", y = "Average weekly new cases") 
+seasonal_impact_plot
 
-  
+# TODO: optimal conditions aka envr conditions and mpox transmission
+# temp and humidity gang gang
