@@ -122,7 +122,7 @@ plot_env_time2 <- ggplot(longer_data, aes(x=week_end_date)) +
   labs(title = "Environmental Trends Over Time", x = "Week", y = "Value")
 plot_env_time2
 
-# TODO: Mpox case bar chart + the environmental factors 
+# Mpox case bar chart + the environmental factors 
 combined_data <- ggplot(inner_join, aes(x = week_end_date)) +
   geom_bar(aes(y = new_confirmed_cases), stat="identity", alpha=0.5) +
   geom_line(aes(y = temp, color = "Temperature"), size=0.8) +
@@ -422,7 +422,6 @@ plot3 <- longer_data %>%
 # Display the plot
 plot3
 
-plot3
 ggsave("plot3.png", width = 12, height =8, dpi= 600)
 ggsave("combined_data.png", width = 12, height =8, dpi= 600)
 
@@ -497,9 +496,10 @@ rate_ratio_data <- data.frame(environmental_factor = c("Temperature", "Dew",
                                       rate_ratio = c(rate_ratio1, rate_ratio2, rate_ratio5, rate_ratio4, rate_ratio3))
 
 rate_ratio_plot <- rate_ratio_data %>%
-    ggplot(aes(y=environmental_factor)) +
-    geom_bar(aes(rate_ratio))
+  ggplot(aes(x=environmental_factor)) +
+  geom_bar(aes(y=rate_ratio), stat="identity", alpha=0.5)
 rate_ratio_plot
+
 # TODO seasonal impact on mpox transmissions
 
   
