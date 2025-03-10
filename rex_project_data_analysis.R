@@ -527,10 +527,15 @@ seasonal_impact
 # cases)
 seasonal_impact_plot <- seasonal_impact %>%
   filter(ID == 0 | ID == 1) %>%
-  ggplot(aes(x = ID)) +
-  geom_bar(aes(y = mean_new_confirmed_cases), stat="identity") + 
+  ggplot(aes(x = ID, y = mean_new_confirmed_cases)) +
+  geom_bar(stat="identity") + 
   labs(title = "Seasonal Impact on Mpox Transmission", 
-       x = "Season", y = "Average weekly new cases") 
+       x = "Season", y = "Average weekly new cases") +
+  theme_minimal(base_size = 16) +
+  theme(plot.title = element_text(size = 28, face = "bold", hjust = 0.5),  # Bigger & centered title
+        axis.title = element_text(size = 20),  # Bigger axis labels
+        axis.text = element_text(size = 16),  # Bigger tick labels
+  ) 
 seasonal_impact_plot
 ggsave("seasonal_impact_plot.png", width = 12, height =8, dpi= 600)
 
@@ -548,10 +553,16 @@ inner_join$ID <- ifelse(inner_join$humidity >= 65 & inner_join$precip >= 2,
 inner_join_plot <- inner_join %>%
   group_by(ID) %>%
   summarise(mean_weekly_new_cases = mean(new_confirmed_cases)) %>%
-  ggplot(aes(x=ID, 
-             y=mean_weekly_new_cases)) +
+  ggplot(aes(x=ID, y=mean_weekly_new_cases)) +
   geom_bar(stat = "identity") +
   labs(title = "Environmental Conditions and Mpox Transmission",
-       x = "Environmental conditions", y = "Mean weekly cases")
+       x = "Environmental conditions", y = "Mean weekly cases") +
+  theme_minimal(base_size = 16) +
+  theme(plot.title = element_text(size = 28, face = "bold", hjust = 0.5),  # Bigger & centered title
+        axis.title = element_text(size = 20),  # Bigger axis labels
+        axis.text = element_text(size = 16),  # Bigger tick labels
+        legend.title = element_text(size = 14, face = "bold"),  # Bigger legend title
+        legend.text = element_text(size = 12)  # Bigger legend labels
+        ) 
 inner_join_plot
 ggsave("inner_join_plot.png", width = 12, height =8, dpi= 600)
