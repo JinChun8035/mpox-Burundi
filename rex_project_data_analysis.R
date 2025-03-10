@@ -429,7 +429,8 @@ ggsave("combined_data.png", width = 12, height =8, dpi= 600)
 temp_hum <- inner_join %>%
     select(temp, humidity, new_confirmed_cases, week_end_date) 
 
-median(inner_join$humidity) # 67.3871
+median(inner_join$humidity) # 67.38571
+median_precip <- median(inner_join$precip) # 0.2857143
 median(inner_join$temp) # 24.62857
 
 
@@ -509,8 +510,8 @@ seasonal_impact <- inner_join %>%
   group_by(month) %>%
   summarise(mean_new_confirmed_cases = mean(new_confirmed_cases), 
             total_new_confirmed_cases = sum(new_confirmed_cases),
-            mean_humidity = mean(humidity),
-            mean_precip = mean(precip))
+            median_humidity = median(humidity),
+            median_precip = median(precip))
 seasonal_impact
 # 2 to represent other, 1 for wet season, 0 for dry season
 seasonal_impact$ID <- c(0, 0, "Dry season (Jul-Sep)", "Dry season (Jul-Sep)", 
@@ -541,16 +542,14 @@ seasonal_impact_plot <- seasonal_impact %>%
 seasonal_impact_plot
 ggsave("seasonal_impact_plot.png", width = 12, height =8, dpi= 600)
 
-# TODO: Optimal conditions aka envr conditions and mpox transmission
-# What's our threshold? We need to explain why or how we chose it
-# Choosing 65 and 2 for now based on mean month data
-inner_join$ID <- ifelse(inner_join$humidity < 65 & inner_join$precip < 2, 
+# Optimal conditions aka envr conditions and mpox transmission
+inner_join$ID <- ifelse(inner_join$humidity < median_humidity & inner_join$precip < median_precip, 
                         "Low humidity, low precip", inner_join$ID)
-inner_join$ID <- ifelse(inner_join$humidity < 65 & inner_join$precip >= 2, 
+inner_join$ID <- ifelse(inner_join$humidity < median_humidity & inner_join$precip >= median_precip, 
                         "Low humidity, high precip", inner_join$ID)
-inner_join$ID <- ifelse(inner_join$humidity >= 65 & inner_join$precip < 2, 
+inner_join$ID <- ifelse(inner_join$humidity >= median_humidity & inner_join$precip < median_precip, 
                         "High humidity, low precip", inner_join$ID)
-inner_join$ID <- ifelse(inner_join$humidity >= 65 & inner_join$precip >= 2, 
+inner_join$ID <- ifelse(inner_join$humidity >= median_humidity & inner_join$precip >= median_precip, 
                         "High humidity, high precip", inner_join$ID)
 inner_join_plot <- inner_join %>%
   group_by(ID) %>%
@@ -563,8 +562,7 @@ inner_join_plot <- inner_join %>%
   theme(plot.title = element_text(size = 28, face = "bold", hjust = 0.5),  # Bigger & centered title
         axis.title = element_text(size = 20),  # Bigger axis labels
         axis.text = element_text(size = 16),  # Bigger tick labels
-        legend.title = element_text(size = 14, face = "bold"),  # Bigger legend title
-        legend.text = element_text(size = 12)  # Bigger legend labels
+        axis.text.x = element_text(angle=45, vjust=1, hjust=1)
         ) 
 inner_join_plot
 ggsave("inner_join_plot.png", width = 12, height =8, dpi= 600)
