@@ -497,7 +497,7 @@ rate_ratio_data <- data.frame(environmental_factor = c("Temperature", "Dew",
 
 rate_ratio_plot <- rate_ratio_data %>%
   ggplot(aes(x=environmental_factor)) +
-  geom_bar(aes(y=rate_ratio), stat="identity", alpha=0.5)
+  geom_bar(aes(y=rate_ratio), stat="identity")
 rate_ratio_plot
 
 # Seasonal impact on mpox transmissions
@@ -508,7 +508,10 @@ seasonal_impact <- inner_join %>%
   mutate(month = month(week_end_date)) %>%
   group_by(month) %>%
   summarise(mean_new_confirmed_cases = mean(new_confirmed_cases), 
-            total_new_confirmed_cases = sum(new_confirmed_cases))
+            total_new_confirmed_cases = sum(new_confirmed_cases),
+            mean_humidity = mean(humidity),
+            mean_precip = mean(precip))
+seasonal_impact
 # 2 to represent other, 1 for wet season, 0 for dry season
 seasonal_impact$ID <- c(2, 2, 0, 0, 0, 1, 1, 1)
 seasonal_impact <- seasonal_impact %>%
@@ -529,6 +532,26 @@ seasonal_impact_plot <- seasonal_impact %>%
   labs(title = "Seasonal Impact on Mpox Transmission", 
        x = "Season", y = "Average weekly new cases") 
 seasonal_impact_plot
+ggsave("seasonal_impact_plot.png", width = 12, height =8, dpi= 600)
 
-# TODO: optimal conditions aka envr conditions and mpox transmission
-# temp and humidity gang gang
+# TODO: Optimal conditions aka envr conditions and mpox transmission
+# What's our threshold? We need to explain why or how we chose it
+# Choosing 65 and 2 for now based on mean month data
+inner_join$ID <- ifelse(inner_join$humidity < 65 & inner_join$precip < 2, 
+                        "Low humidity, low precip", inner_join$ID)
+inner_join$ID <- ifelse(inner_join$humidity < 65 & inner_join$precip >= 2, 
+                        "Low humidity, high precip", inner_join$ID)
+inner_join$ID <- ifelse(inner_join$humidity >= 65 & inner_join$precip < 2, 
+                        "High humidity, low precip", inner_join$ID)
+inner_join$ID <- ifelse(inner_join$humidity >= 65 & inner_join$precip >= 2, 
+                        "High humidity, high precip", inner_join$ID)
+inner_join_plot <- inner_join %>%
+  group_by(ID) %>%
+  summarise(mean_weekly_new_cases = mean(new_confirmed_cases)) %>%
+  ggplot(aes(x=ID, 
+             y=mean_weekly_new_cases)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Environmental Conditions and Mpox Transmission",
+       x = "Environmental conditions", y = "Mean weekly cases")
+inner_join_plot
+ggsave("inner_join_plot.png", width = 12, height =8, dpi= 600)
