@@ -513,7 +513,9 @@ seasonal_impact <- inner_join %>%
             mean_precip = mean(precip))
 seasonal_impact
 # 2 to represent other, 1 for wet season, 0 for dry season
-seasonal_impact$ID <- c(2, 2, 0, 0, 0, 1, 1, 1)
+seasonal_impact$ID <- c(0, 0, "Dry season (Jul-Sep)", "Dry season (Jul-Sep)", 
+                        "Dry season (Jul-Sep)", "Wet season (Oct-Dec)", 
+                        "Wet season (Oct-Dec)", "Wet season (Oct-Dec)")
 seasonal_impact <- seasonal_impact %>%
   group_by(ID) %>%
   summarise(mean_new_confirmed_cases = mean(mean_new_confirmed_cases), 
@@ -526,7 +528,7 @@ seasonal_impact
 # (2093 total cases). Dry Season (Jul-Sep): 61.5 average weekly cases (853 total 
 # cases)
 seasonal_impact_plot <- seasonal_impact %>%
-  filter(ID == 0 | ID == 1) %>%
+  filter(ID != 0) %>%
   ggplot(aes(x = ID, y = mean_new_confirmed_cases)) +
   geom_bar(stat="identity") + 
   labs(title = "Seasonal Impact on Mpox Transmission", 
